@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { config } from 'dotenv';
+// import OpenAI from 'openai';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+config();
+
+// const openai = new OpenAI({
+//     apiKey: process.env.OPENAI_API_KEY,
+// });
+
+const client = new BedrockRuntimeClient({ region: "us-west-2" }); 
 
 const systemPrompt = `Role: You are the Headstarter AI Customer Support Bot, a friendly and knowledgeable virtual assistant designed to help users navigate and make the most out of the Headstarter AI platform. This platform offers AI-powered interview practice specifically tailored for software engineering (SWE) jobs. Your goal is to provide efficient, accurate, and helpful responses to user queries, ensuring a seamless experience.
 
@@ -48,31 +54,76 @@ Behavior in Uncertain Situations:
 
 If unsure of the answer, apologize and either provide a general suggestion, guide the user to the appropriate resources, or escalate the query to human support.`
 
+// export async function POST(req) {
+//     const data = await req.json();
+//     const completion = await openai.chat.completions.create({
+//         messages: [
+//             {
+//                 role: 'system',
+//                 content: systemPrompt,
+//             },
+//             ...data,
+//         ],
+//         model: 'gpt-4o-mini',
+//         stream: true,
+//     });
+
+//     const stream = new ReadableStream({
+//         async start(controller) {
+//             const encoder = new TextEncoder();
+//             try {
+//                 for await (const chunk of completion) {
+//                     const content = chunk.choices[0]?.delta?.content;
+//                     if (content) {
+//                         const text = encoder.encode(content);
+//                         controller.enqueue(text);
+//                     }
+//                 }   
+//             } catch (err) {
+//                 controller.error(err);
+//             } finally {
+//                 controller.close();
+//             }
+//         },
+//     });
+
+//     return new NextResponse(stream);
+// }
+
 export async function POST(req) {
+
     const data = await req.json();
-    const completion = await openai.chat.completions.create({
-        messages: [
-            {
-                role: 'system',
-                content: systemPrompt,
-            },
-            ...data,
-        ],
-        model: 'gpt-4o-mini',
-        stream: true,
-    });
+    
+    const prompt = [
+        { role: 'system', content: systemPrompt },
+        ...data
+    ].map(msg => `${msg.role}: ${msg.content}`).join('\n\n');
+
+    const input = {
+        modelId: "meta.llama3-1-405b-instruct-v1:0", 
+        contentType: "application/json",
+        accept: "application/json",
+        body: JSON.stringify({
+            prompt: prompt,
+            max_gen_len: 512,
+            temperature: 0.5,
+            top_p: 0.9
+        })
+    };
+
+    const command = new InvokeModelCommand(input);
 
     const stream = new ReadableStream({
         async start(controller) {
             const encoder = new TextEncoder();
             try {
-                for await (const chunk of completion) {
-                    const content = chunk.choices[0]?.delta?.content;
-                    if (content) {
-                        const text = encoder.encode(content);
-                        controller.enqueue(text);
-                    }
-                }   
+                const response = await client.send(command);
+                const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+                const content = responseBody.generation;
+                if (content) {
+                    const text = encoder.encode(content);
+                    controller.enqueue(text);
+                }
             } catch (err) {
                 controller.error(err);
             } finally {
@@ -83,3 +134,4 @@ export async function POST(req) {
 
     return new NextResponse(stream);
 }
+
