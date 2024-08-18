@@ -5,7 +5,7 @@ import { Box, Stack, TextField, Button } from "@mui/material";
 export default function Home() {
   const [messages, setMessages] = useState([{
     role: 'assistant',
-    content: `Hi! I'm the Headstarter Support Agent, how can I assist you today?`
+    content: `Hi! I'm an asistant designed to test a RAG use case by providing relevant answers to any user queries about Lex Fridman's podcast with Aravind Srinivas from Perplexity. Feel free to ask me anything!`,
   }]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
