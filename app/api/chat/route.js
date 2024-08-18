@@ -19,8 +19,8 @@ const openai = new OpenAI({
 const bedrockClient = new BedrockRuntimeClient({ 
     region: "us-west-2",
     credentials: {
-        accessKeyId: process.env.BEDROCK_ACCESS_KEY_ID,
-        secretAccessKey: process.env.BEDROCK_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
  }); 
 
